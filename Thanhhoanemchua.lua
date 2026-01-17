@@ -1,8 +1,8 @@
 --[[ 
-    SCRIPT ZERAA OVERLAY V6 - FINAL
-    - File Save Name: "Zeraa_[Username].txt"
-    - Workspace Data: Folder "ZeraaData"
-    - Dual Fonts: 12187361943 (Text) & 12187362120 (Stats)
+    SCRIPT ZERAA OVERLAY V7 - FINAL NOTIFICATION VER
+    - Font Stats: 12187368317
+    - Notification: Zeraa/BNN Hub
+    - File Save: "Zeraa_[Username].txt"
     - Accurate FPS & Time Tracking
 ]]
 
@@ -13,32 +13,31 @@ local MarketplaceService = game:GetService("MarketplaceService")
 local Lighting = game:GetService("Lighting")
 local CoreGui = game:GetService("CoreGui")
 local Workspace = game:GetService("Workspace")
+local StarterGui = game:GetService("StarterGui")
 
 local LocalPlayer = Players.LocalPlayer
 
--- == CẤU HÌNH FONT ==
--- Font 1: Zeraa, Username, Game, Time (Theo yêu cầu)
+-- == 1. CẤU HÌNH FONT ==
+-- Font A: Zeraa, User, Game, Time (Font chữ)
 local TextFontID = "rbxassetid://12187361943"
 local TextFont = Font.new(TextFontID, Enum.FontWeight.Bold, Enum.FontStyle.Normal)
 
--- Font 2: FPS, RAM, MS (Theo yêu cầu)
-local NumberFontID = "rbxassetid://12187362120"
+-- Font B: FPS, RAM, MS (Font số mới theo yêu cầu)
+local NumberFontID = "rbxassetid://12187368317"
 local NumberFont = Font.new(NumberFontID, Enum.FontWeight.Bold, Enum.FontStyle.Normal)
 
--- == HỆ THỐNG FILE SAVE (Zeraa_LocalPlayer.txt) ==
--- Tên file sẽ thay đổi theo tên người chơi để tránh lỗi khi đổi acc
+-- == 2. HỆ THỐNG LƯU TRỮ (FILE & WORKSPACE) ==
 local FileName = "Zeraa_" .. LocalPlayer.Name .. ".txt"
-
 local SavedTotalTime = 0
 local SessionStartTime = os.time()
 
--- 1. Đọc file cũ nếu tồn tại
+-- Đọc file cũ
 if isfile and isfile(FileName) then
     local content = readfile(FileName)
     SavedTotalTime = tonumber(content) or 0
 end
 
--- 2. Tạo Folder trong Workspace
+-- Tạo Folder Workspace
 local DataFolder = Workspace:FindFirstChild("ZeraaData")
 if not DataFolder then
     DataFolder = Instance.new("Folder")
@@ -46,7 +45,6 @@ if not DataFolder then
     DataFolder.Parent = Workspace
 end
 
--- Tạo các Value object để theo dõi
 local SessionVal = DataFolder:FindFirstChild("SessionTime") or Instance.new("IntValue", DataFolder)
 SessionVal.Name = "SessionTime"
 
@@ -54,20 +52,20 @@ local TotalVal = DataFolder:FindFirstChild("TotalTime") or Instance.new("IntValu
 TotalVal.Name = "TotalTime"
 TotalVal.Value = SavedTotalTime
 
--- == GUI SETUP ==
-if CoreGui:FindFirstChild("ZeraaScreenV6") then CoreGui.ZeraaScreenV6:Destroy() end
-if Lighting:FindFirstChild("ZeraaBlurV6") then Lighting.ZeraaBlurV6:Destroy() end
+-- == 3. GIAO DIỆN (GUI) ==
+if CoreGui:FindFirstChild("ZeraaScreenV7") then CoreGui.ZeraaScreenV7:Destroy() end
+if Lighting:FindFirstChild("ZeraaBlurV7") then Lighting.ZeraaBlurV7:Destroy() end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "ZeraaScreenV6"
+ScreenGui.Name = "ZeraaScreenV7"
 ScreenGui.IgnoreGuiInset = true
 ScreenGui.ResetOnSpawn = false
 pcall(function() ScreenGui.Parent = CoreGui end)
 if not ScreenGui.Parent then ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
 
--- Hiệu ứng
+-- Hiệu ứng nền
 local Blur = Instance.new("BlurEffect")
-Blur.Name = "ZeraaBlurV6"
+Blur.Name = "ZeraaBlurV7"
 Blur.Size = 20
 Blur.Parent = Lighting
 
@@ -75,13 +73,13 @@ local DimFrame = Instance.new("Frame")
 DimFrame.Name = "DimLayer"
 DimFrame.Size = UDim2.new(1, 0, 1, 0)
 DimFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-DimFrame.BackgroundTransparency = 0.6
+DimFrame.BackgroundTransparency = 0.6 -- Tối 40%
 DimFrame.Parent = ScreenGui
 
--- Layout Container
+-- Container chính (Căn giữa)
 local MainContainer = Instance.new("Frame")
-MainContainer.Size = UDim2.new(0.9, 0, 0.9, 0)
-MainContainer.Position = UDim2.new(0.05, 0, 0.05, 0)
+MainContainer.Size = UDim2.new(0.9, 0, 0.85, 0)
+MainContainer.Position = UDim2.new(0.05, 0, 0.075, 0)
 MainContainer.BackgroundTransparency = 1
 MainContainer.Parent = ScreenGui
 
@@ -90,12 +88,13 @@ UIList.Parent = MainContainer
 UIList.FillDirection = Enum.FillDirection.Vertical
 UIList.HorizontalAlignment = Enum.HorizontalAlignment.Center
 UIList.VerticalAlignment = Enum.VerticalAlignment.Center
-UIList.Padding = UDim.new(0.02, 0)
+UIList.Padding = UDim.new(0.02, 0) -- Khoảng cách giữa các dòng
 
 -- Hàm tạo Label nhanh
-local function CreateLabel(name, font, sizeY, color)
+local function CreateLabel(name, font, sizeY, color, order)
     local lab = Instance.new("TextLabel")
     lab.Name = name
+    lab.LayoutOrder = order -- Đảm bảo thứ tự hiển thị
     lab.Size = UDim2.new(1, 0, sizeY, 0)
     lab.TextColor3 = color
     lab.BackgroundTransparency = 1
@@ -104,36 +103,52 @@ local function CreateLabel(name, font, sizeY, color)
     lab.Parent = MainContainer
     
     local constraint = Instance.new("UITextSizeConstraint")
-    constraint.MaxTextSize = (name == "Title") and 130 or 50
+    constraint.MaxTextSize = (name == "1_Title") and 140 or 50 -- Chữ Zeraa to hơn hẳn
     constraint.Parent = lab
     return lab
 end
 
--- 1. Zeraa
-local TitleLabel = CreateLabel("Title", TextFont, 0.2, Color3.fromRGB(135, 206, 250))
+-- A. ZERAA (TO NHẤT - Ở TRÊN CÙNG)
+local TitleLabel = CreateLabel("1_Title", TextFont, 0.25, Color3.fromRGB(135, 206, 250), 1)
 TitleLabel.Text = "Zeraa"
 
--- 2. Username
-local UserLabel = CreateLabel("User", TextFont, 0.08, Color3.fromRGB(255, 255, 255))
+-- B. User
+local UserLabel = CreateLabel("2_User", TextFont, 0.08, Color3.fromRGB(255, 255, 255), 2)
 UserLabel.Text = "Username: " .. LocalPlayer.Name
 
--- 3. Game Name
-local GameLabel = CreateLabel("Game", TextFont, 0.12, Color3.fromRGB(255, 255, 255))
+-- C. Game
+local GameLabel = CreateLabel("3_Game", TextFont, 0.12, Color3.fromRGB(255, 255, 255), 3)
 GameLabel.Text = "Game: Loading..."
 task.spawn(function()
     local s, i = pcall(function() return MarketplaceService:GetProductInfo(game.PlaceId) end)
     if s and i then GameLabel.Text = "Game: " .. i.Name else GameLabel.Text = "Game: Unknown" end
 end)
 
--- 4. Time & Total Time (Dùng Font Zeraa - TextFont)
-local TimeLabel = CreateLabel("TimeInfo", TextFont, 0.10, Color3.fromRGB(255, 255, 255))
+-- D. Time (Dùng Font cũ)
+local TimeLabel = CreateLabel("4_Time", TextFont, 0.10, Color3.fromRGB(255, 255, 255), 4)
 TimeLabel.Text = "Time: 00:00:00 | Total Time: 00:00:00"
 
--- 5. Stats FPS RAM MS (Dùng Font Số - NumberFont)
-local StatsLabel = CreateLabel("Stats", NumberFont, 0.10, Color3.fromRGB(220, 220, 220))
+-- E. Stats (Dùng Font MỚI: 12187368317)
+local StatsLabel = CreateLabel("5_Stats", NumberFont, 0.12, Color3.fromRGB(220, 220, 220), 5)
 StatsLabel.Text = "Calculating..."
 
--- == LOGIC LOOP ==
+
+-- == 4. GỬI THÔNG BÁO (NOTIFICATION) ==
+task.spawn(function()
+    -- Đợi 1 chút để chắc chắn game đã load core
+    task.wait(1)
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = "Zeraa/BNN Hub",
+            Text = "Banana Cat Hub discord.gg/chuoihub",
+            Duration = 10, -- Hiển thị trong 10 giây
+            -- Icon = "rbxassetid://..." (Nếu bạn có icon thì điền vào đây)
+        })
+    end)
+end)
+
+
+-- == 5. LOGIC LOOP ==
 local function FormatTime(seconds)
     local h = math.floor(seconds / 3600)
     local m = math.floor((seconds % 3600) / 60)
@@ -150,41 +165,37 @@ task.spawn(function()
     while ScreenGui.Parent do
         task.wait(1)
         
-        -- A. FPS Calculation (Time Delta)
+        -- Tính FPS
         local CurrentTime = os.clock()
         local TimeDiff = CurrentTime - LastTime
         local fps = math.floor(FrameCount / TimeDiff)
         FrameCount = 0
         LastTime = CurrentTime
         
-        -- B. RAM & Ping
+        -- Tính RAM & Ping
         local ram = math.floor(StatsService:GetTotalMemoryUsageMb())
         local ping = 0
         pcall(function() ping = math.floor(StatsService.Network.ServerStatsItem["Data Ping"]:GetValue()) end)
         
-        -- C. Time Logic
+        -- Tính Time
         local CurrentSession = os.time() - SessionStartTime
         local CurrentTotal = SavedTotalTime + CurrentSession
         
-        local TimeStr = FormatTime(CurrentSession)
-        local TotalStr = FormatTime(CurrentTotal)
-        
-        -- D. Update Workspace & File
+        -- Update Value
         if SessionVal then SessionVal.Value = CurrentSession end
         if TotalVal then TotalVal.Value = CurrentTotal end
         
-        -- Lưu file mỗi giây (overwrite)
+        -- Lưu file
         if writefile then
             writefile(FileName, tostring(CurrentTotal))
         end
 
-        -- E. Update UI
-        -- Time dùng font chữ (Zeraa font)
-        TimeLabel.Text = string.format("Time: %s  |  Total Time: %s", TimeStr, TotalStr)
+        -- Update UI
+        TimeLabel.Text = string.format("Time: %s  |  Total Time: %s", FormatTime(CurrentSession), FormatTime(CurrentTotal))
         
-        -- Stats dùng font số (Number font)
+        -- Stats với Font mới
         StatsLabel.Text = string.format("FPS: %d  |  RAM: %d MB  |  ms: %d", fps, ram, ping)
     end
 end)
 
-print("Zeraa Script V6 Loaded. File saved as: " .. FileName)
+print("Zeraa V7 Loaded: Notification Sent & Stats Font Updated")
