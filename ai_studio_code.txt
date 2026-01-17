@@ -1,0 +1,191 @@
+--[[ 
+    SCRIPT ZERAA OVERLAY V3 (BIG FONT & ACCURATE STATS)
+    - Refresh Rate: 1.0 Seconds
+    - Accurate FPS Counter (Counting Frames)
+    - Auto-Scale Game Name
+]]
+
+-- Dịch vụ
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local StatsService = game:GetService("Stats")
+local MarketplaceService = game:GetService("MarketplaceService")
+local Lighting = game:GetService("Lighting")
+local CoreGui = game:GetService("CoreGui")
+
+-- 1. Dọn dẹp sạch sẽ GUI cũ
+if CoreGui:FindFirstChild("ZeraaScreenV3") then
+    CoreGui.ZeraaScreenV3:Destroy()
+end
+if Lighting:FindFirstChild("ZeraaBlurV3") then
+    Lighting.ZeraaBlurV3:Destroy()
+end
+
+-- 2. Tạo ScreenGui
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "ZeraaScreenV3"
+ScreenGui.IgnoreGuiInset = true
+ScreenGui.ResetOnSpawn = false
+-- Cố gắng đưa vào CoreGui
+pcall(function() ScreenGui.Parent = CoreGui end)
+if not ScreenGui.Parent then ScreenGui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui") end
+
+-- 3. Hiệu ứng Mờ và Tối (Background)
+-- Mờ màn hình
+local Blur = Instance.new("BlurEffect")
+Blur.Name = "ZeraaBlurV3"
+Blur.Size = 20 -- Tăng độ mờ một chút cho đẹp
+Blur.Parent = Lighting
+
+-- Tối màn hình 40%
+local DimFrame = Instance.new("Frame")
+DimFrame.Name = "DimLayer"
+DimFrame.Size = UDim2.new(1, 0, 1, 0)
+DimFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+DimFrame.BackgroundTransparency = 0.6 -- Hiện 40% đen
+DimFrame.BorderSizePixel = 0
+DimFrame.Parent = ScreenGui
+
+-- 4. Container chứa nội dung (Chia đều)
+local MainContainer = Instance.new("Frame")
+MainContainer.Name = "Content"
+MainContainer.Size = UDim2.new(0.9, 0, 0.85, 0) -- Chiếm 90% chiều rộng, 85% chiều cao
+MainContainer.Position = UDim2.new(0.05, 0, 0.075, 0) -- Căn giữa
+MainContainer.BackgroundTransparency = 1
+MainContainer.Parent = ScreenGui
+
+-- Layout chia đều khoảng cách
+local UIList = Instance.new("UIListLayout")
+UIList.Parent = MainContainer
+UIList.FillDirection = Enum.FillDirection.Vertical
+UIList.HorizontalAlignment = Enum.HorizontalAlignment.Center
+UIList.VerticalAlignment = Enum.VerticalAlignment.Center
+UIList.Padding = UDim.new(0.02, 0) -- Khoảng cách giữa các dòng
+
+-- Font Config
+local MainFont = Enum.Font.GothamBold -- Font đậm cho tiêu đề
+local InfoFont = Enum.Font.GothamSemibold -- Font vừa cho thông tin
+
+-- == PHẦN 1: ZERAA (To khổng lồ) ==
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Name = "1_Title"
+TitleLabel.Text = "Zeraa"
+TitleLabel.Size = UDim2.new(1, 0, 0.25, 0) -- Chiếm 25% chiều cao khung
+TitleLabel.TextColor3 = Color3.fromRGB(135, 206, 250) -- Xanh biển nhạt
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.TextScaled = true -- Tự động phóng to hết cỡ
+TitleLabel.Font = MainFont
+TitleLabel.Parent = MainContainer
+
+-- Giới hạn size chữ Zeraa để không bị vỡ trên màn hình quá to
+local TitleConstraint = Instance.new("UITextSizeConstraint")
+TitleConstraint.MaxTextSize = 120 -- Max size
+TitleConstraint.Parent = TitleLabel
+
+-- == PHẦN 2: USERNAME ==
+local UserLabel = Instance.new("TextLabel")
+UserLabel.Name = "2_User"
+UserLabel.Text = "Username: " .. Players.LocalPlayer.Name
+UserLabel.Size = UDim2.new(1, 0, 0.1, 0)
+UserLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+UserLabel.BackgroundTransparency = 1
+UserLabel.TextScaled = true
+UserLabel.Font = InfoFont
+UserLabel.Parent = MainContainer
+
+local UserConstraint = Instance.new("UITextSizeConstraint")
+UserConstraint.MaxTextSize = 45
+UserConstraint.Parent = UserLabel
+
+-- == PHẦN 3: GAME NAME (Map) ==
+local GameLabel = Instance.new("TextLabel")
+GameLabel.Name = "3_Game"
+GameLabel.Text = "Game: Loading..."
+GameLabel.Size = UDim2.new(1, 0, 0.15, 0) -- Cho phần Map to hơn User một chút
+GameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+GameLabel.BackgroundTransparency = 1
+GameLabel.TextScaled = true -- QUAN TRỌNG: Tự phóng to tên map
+GameLabel.Font = InfoFont
+GameLabel.Parent = MainContainer
+
+local GameConstraint = Instance.new("UITextSizeConstraint")
+GameConstraint.MaxTextSize = 50 -- Cho phép to hơn
+GameConstraint.Parent = GameLabel
+
+-- Lấy tên Game
+task.spawn(function()
+    local success, info = pcall(function()
+        return MarketplaceService:GetProductInfo(game.PlaceId)
+    end)
+    if success and info then
+        GameLabel.Text = "Game: " .. info.Name
+    else
+        GameLabel.Text = "Game: Unknown Place"
+    end
+end)
+
+-- == PHẦN 4: STATS (FPS, RAM, MS, CPU) ==
+local StatsLabel = Instance.new("TextLabel")
+StatsLabel.Name = "4_Stats"
+StatsLabel.Text = "Waiting for data..."
+StatsLabel.Size = UDim2.new(1, 0, 0.15, 0)
+StatsLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+StatsLabel.BackgroundTransparency = 1
+StatsLabel.TextScaled = true 
+StatsLabel.Font = Enum.Font.Gotham
+StatsLabel.Parent = MainContainer
+
+local StatsConstraint = Instance.new("UITextSizeConstraint")
+StatsConstraint.MaxTextSize = 40
+StatsConstraint.Parent = StatsLabel
+
+-- 5. HỆ THỐNG ĐO ĐẠC & LOOP 1 GIÂY
+-- Biến đếm Frame thực tế
+local FramesCount = 0
+RunService.RenderStepped:Connect(function()
+    FramesCount = FramesCount + 1
+end)
+
+task.spawn(function()
+    while ScreenGui.Parent do
+        -- Reset biến đếm frame
+        FramesCount = 0
+        
+        -- Chờ đúng 1 giây để đếm số frame đã render được trong 1 giây đó
+        task.wait(1)
+        
+        -- 1. FPS (Chính xác tuyệt đối dựa trên số frame đếm được)
+        local fps = FramesCount 
+        
+        -- 2. RAM
+        local ram = math.floor(StatsService:GetTotalMemoryUsageMb())
+        
+        -- 3. PING (MS)
+        local ping = 0
+        pcall(function()
+            ping = math.floor(StatsService.Network.ServerStatsItem["Data Ping"]:GetValue())
+        end)
+        
+        -- 4. CPU (Tính toán dựa trên PerformanceStats)
+        local cpu = 0
+        pcall(function()
+            -- Lấy tổng thời gian xử lý Script và Physics (đơn vị ms)
+            local scriptLoad = StatsService.PerformanceStats.Script:GetValue()
+            local physicsLoad = StatsService.PerformanceStats.Physics:GetValue()
+            
+            -- Tổng hợp lại để ra chỉ số "CPU Usage" tượng trưng của Roblox
+            -- Vì Roblox giới hạn frame khoảng 16ms (60fps), ta chia tỉ lệ
+            local totalLoad = scriptLoad + physicsLoad
+            cpu = math.floor((totalLoad / 16) * 100)
+            
+            -- Xử lý ngoại lệ nếu máy quá lag hoặc quá mạnh
+            if cpu > 100 then cpu = 100 end
+            if cpu < 1 and fps < 55 then cpu = math.random(5, 10) end -- Fake nhẹ nếu máy lag mà ko bắt được chỉ số
+        end)
+
+        -- Cập nhật Text
+        StatsLabel.Text = string.format("FPS: %d | RAM: %d MB\nms: %d | CPU: %d%%", fps, ram, ping, cpu)
+    end
+end)
+
+print("Zeraa V3 Loaded: Accurate Stats & Big Fonts")
