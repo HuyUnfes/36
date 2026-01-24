@@ -6,8 +6,9 @@
 local SourceCode = [==[
 
 -- [[ 1. CHỜ GAME LOAD & CHECK PLAYER ]] --
-repeat task.wait() until game:IsLoaded() and Players.LocalPlayer
+repeat task.wait() until game:IsLoaded()
 local Players = game:GetService("Players")
+repeat task.wait() until Players.LocalPlayer
 local LocalPlayer = Players.LocalPlayer
 
 local TeleportService = game:GetService("TeleportService")
