@@ -1,16 +1,21 @@
 --[[ 
-    JOB ID JOINER - DUAL MODE (SINGLE & SPAM)
+    BLOX FRUITS TOOLKIT: JOINER + AUTOLOAD + MIRAGE ESP
     Created by Request
 ]]
+
+local SourceCode = [==[
 
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local VirtualUser = game:GetService("VirtualUser")
+local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
+local StarterGui = game:GetService("StarterGui")
+local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
 --------------------------------------------------------------------------------
--- 1. ANTI-AFK
+-- 1. HỆ THỐNG ANTI-AFK (An toàn)
 --------------------------------------------------------------------------------
 local function activateAntiAfk()
     LocalPlayer.Idled:Connect(function()
@@ -21,70 +26,139 @@ end
 activateAntiAfk()
 
 --------------------------------------------------------------------------------
--- 2. HÀM LỌC ID (CLEAN TEXT)
+-- 2. HỆ THỐNG ESP MIRAGE ISLAND (ĐẢO BÍ ẨN)
+--------------------------------------------------------------------------------
+local espEnabled = false
+local espLoop = nil
+
+-- Hàm tạo ESP (Hộp + Tên)
+local function createESP(object, text)
+    if object:FindFirstChild("MirageESP") then return end -- Đã có ESP thì thôi
+
+    local bgui = Instance.new("BillboardGui")
+    bgui.Name = "MirageESP"
+    bgui.Adornee = object
+    bgui.Size = UDim2.new(0, 200, 0, 50)
+    bgui.StudsOffset = Vector3.new(0, 50, 0)
+    bgui.AlwaysOnTop = true -- Luôn nhìn thấy xuyên tường
+    bgui.Parent = object
+
+    local label = Instance.new("TextLabel")
+    label.Parent = bgui
+    label.BackgroundTransparency = 1
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.Text = text .. "\n[" .. math.floor((LocalPlayer.Character.HumanoidRootPart.Position - object.Position).Magnitude) .. "m]"
+    label.TextColor3 = Color3.fromRGB(255, 0, 255) -- Màu tím mộng mơ
+    label.TextStrokeTransparency = 0
+    label.TextSize = 20
+    label.Font = Enum.Font.GothamBold
+    
+    -- Cập nhật khoảng cách liên tục
+    task.spawn(function()
+        while object and object.Parent and bgui do
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                local dist = math.floor((LocalPlayer.Character.HumanoidRootPart.Position - object.Position).Magnitude)
+                label.Text = text .. "\n[" .. dist .. "m]"
+            end
+            task.wait(1)
+        end
+    end)
+end
+
+-- Hàm quét tìm đảo
+local function scanForMirage()
+    -- Tìm trong Workspace (Các phiên bản Blox Fruits thường để Mirage Island ở đây hoặc trong Map)
+    for _, v in pairs(Workspace:GetChildren()) do
+        if v.Name == "Mirage Island" or v.Name:find("Mirage") then
+            return v
+        end
+    end
+    -- Tìm trong folder Map (nếu có)
+    local mapFolder = Workspace:FindFirstChild("Map")
+    if mapFolder then
+        for _, v in pairs(mapFolder:GetChildren()) do
+             if v.Name == "Mirage Island" or v.Name:find("Mirage") then
+                return v
+            end
+        end
+    end
+    return nil
+end
+
+local function toggleESP()
+    espEnabled = not espEnabled
+    return espEnabled
+end
+
+--------------------------------------------------------------------------------
+-- 3. HÀM LỌC JOB ID
 --------------------------------------------------------------------------------
 local function extractJobId(text)
     if not text then return nil end
-    -- Pattern chuẩn UUID: 8-4-4-4-12
     local pattern = "%x%x%x%x%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%x%x%x%x%x%x%x%x"
     return string.match(text, pattern)
 end
 
 --------------------------------------------------------------------------------
--- 3. GIAO DIỆN UI
+-- 4. GIAO DIỆN UI
 --------------------------------------------------------------------------------
+for _, v in pairs(CoreGui:GetChildren()) do
+    if v.Name == "BloxFruitsTool" then v:Destroy() end
+end
+
 local ScreenGui = Instance.new("ScreenGui")
 local MainFrame = Instance.new("Frame")
 local Title = Instance.new("TextLabel")
 local CloseButton = Instance.new("TextButton")
 local InputBox = Instance.new("TextBox")
 local StatusLabel = Instance.new("TextLabel")
-local BtnJoinOnce = Instance.new("TextButton") -- Nút Join thường
-local BtnSpamJoin = Instance.new("TextButton") -- Nút Spam
+local BtnJoinOnce = Instance.new("TextButton")
+local BtnSpamJoin = Instance.new("TextButton")
+local BtnESP = Instance.new("TextButton") -- Nút ESP mới
 
--- Parent UI
 if syn and syn.protect_gui then syn.protect_gui(ScreenGui) ScreenGui.Parent = CoreGui
 elseif gethui then ScreenGui.Parent = gethui()
 else ScreenGui.Parent = CoreGui end
 
+ScreenGui.Name = "BloxFruitsTool"
+
 -- Main Frame
-MainFrame.Name = "JobIdDual"
+MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
-MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 MainFrame.BorderSizePixel = 0
-MainFrame.Position = UDim2.new(0.5, -150, 0.5, -100)
-MainFrame.Size = UDim2.new(0, 300, 0, 200)
+MainFrame.Position = UDim2.new(0.5, -160, 0.5, -125) -- Cao hơn chút để chứa nút mới
+MainFrame.Size = UDim2.new(0, 320, 0, 250)
 MainFrame.Active = true
 MainFrame.Draggable = true
 
 -- Title
 Title.Parent = MainFrame
-Title.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+Title.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 Title.Size = UDim2.new(1, 0, 0, 30)
 Title.Font = Enum.Font.GothamBold
-Title.Text = "  Job ID Joiner"
+Title.Text = "  BF Tool: Joiner & ESP"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.TextSize = 14
+Title.TextSize = 13
 
 -- Close Button
 CloseButton.Parent = Title
 CloseButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 CloseButton.Position = UDim2.new(1, -30, 0, 0)
 CloseButton.Size = UDim2.new(0, 30, 0, 30)
-CloseButton.Font = Enum.Font.GothamBold
 CloseButton.Text = "X"
 CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 CloseButton.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
 
 -- Input Box
 InputBox.Parent = MainFrame
-InputBox.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+InputBox.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
 InputBox.BorderSizePixel = 0
-InputBox.Position = UDim2.new(0.05, 0, 0.2, 0)
-InputBox.Size = UDim2.new(0.9, 0, 0.25, 0)
+InputBox.Position = UDim2.new(0.05, 0, 0.16, 0)
+InputBox.Size = UDim2.new(0.9, 0, 0.2, 0)
 InputBox.Font = Enum.Font.Code
-InputBox.PlaceholderText = "Paste text Discord... (tự lọc rác)"
+InputBox.PlaceholderText = "Paste Discord Job ID..."
 InputBox.Text = ""
 InputBox.TextColor3 = Color3.fromRGB(200, 200, 200)
 InputBox.TextSize = 12
@@ -94,106 +168,145 @@ InputBox.ClearTextOnFocus = false
 -- Status Label
 StatusLabel.Parent = MainFrame
 StatusLabel.BackgroundTransparency = 1
-StatusLabel.Position = UDim2.new(0, 0, 0.45, 0)
-StatusLabel.Size = UDim2.new(1, 0, 0.15, 0)
+StatusLabel.Position = UDim2.new(0, 0, 0.38, 0)
+StatusLabel.Size = UDim2.new(1, 0, 0.1, 0)
 StatusLabel.Font = Enum.Font.Gotham
-StatusLabel.Text = "Waiting..."
+StatusLabel.Text = "Status: Ready"
 StatusLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
 StatusLabel.TextSize = 12
 
---------------------------------------------------------------------------------
--- 4. SETUP 2 NÚT BẤM
---------------------------------------------------------------------------------
-
--- >> NÚT 1: JOIN 1 LẦN (Màu Xanh Lá)
+-- BUTTON 1: JOIN ONCE
 BtnJoinOnce.Parent = MainFrame
 BtnJoinOnce.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
-BtnJoinOnce.Position = UDim2.new(0.05, 0, 0.65, 0)
-BtnJoinOnce.Size = UDim2.new(0.42, 0, 0.25, 0)
+BtnJoinOnce.Position = UDim2.new(0.05, 0, 0.5, 0)
+BtnJoinOnce.Size = UDim2.new(0.42, 0, 0.18, 0)
 BtnJoinOnce.Font = Enum.Font.GothamBold
 BtnJoinOnce.Text = "JOIN (1 Lần)"
 BtnJoinOnce.TextColor3 = Color3.fromRGB(255, 255, 255)
-BtnJoinOnce.TextSize = 12
+BtnJoinOnce.TextSize = 11
 
--- >> NÚT 2: SPAM JOIN (Màu Cam)
+-- BUTTON 2: SPAM JOIN
 BtnSpamJoin.Parent = MainFrame
 BtnSpamJoin.BackgroundColor3 = Color3.fromRGB(230, 126, 34)
-BtnSpamJoin.Position = UDim2.new(0.53, 0, 0.65, 0)
-BtnSpamJoin.Size = UDim2.new(0.42, 0, 0.25, 0)
+BtnSpamJoin.Position = UDim2.new(0.53, 0, 0.5, 0)
+BtnSpamJoin.Size = UDim2.new(0.42, 0, 0.18, 0)
 BtnSpamJoin.Font = Enum.Font.GothamBold
-BtnSpamJoin.Text = "SPAM JOIN (Treo)"
+BtnSpamJoin.Text = "SPAM JOIN"
 BtnSpamJoin.TextColor3 = Color3.fromRGB(255, 255, 255)
-BtnSpamJoin.TextSize = 12
+BtnSpamJoin.TextSize = 11
+
+-- BUTTON 3: ESP MIRAGE (Nút To Phía Dưới)
+BtnESP.Parent = MainFrame
+BtnESP.BackgroundColor3 = Color3.fromRGB(142, 68, 173) -- Màu tím
+BtnESP.Position = UDim2.new(0.05, 0, 0.72, 0)
+BtnESP.Size = UDim2.new(0.9, 0, 0.2, 0)
+BtnESP.Font = Enum.Font.GothamBold
+BtnESP.Text = "BẬT/TẮT TÌM ĐẢO BÍ ẨN (MIRAGE)"
+BtnESP.TextColor3 = Color3.fromRGB(255, 255, 255)
+BtnESP.TextSize = 12
 
 --------------------------------------------------------------------------------
 -- 5. LOGIC XỬ LÝ
 --------------------------------------------------------------------------------
-
--- Biến kiểm soát spam
 local isSpamming = false
 
--- Logic nút JOIN 1 LẦN
+-- Logic Join Once
 BtnJoinOnce.MouseButton1Click:Connect(function()
-    -- Tắt spam nếu đang chạy
-    isSpamming = false 
-    BtnSpamJoin.Text = "SPAM JOIN (Treo)"
+    isSpamming = false
+    BtnSpamJoin.Text = "SPAM JOIN"
     BtnSpamJoin.BackgroundColor3 = Color3.fromRGB(230, 126, 34)
-
     local id = extractJobId(InputBox.Text)
     if id then
-        InputBox.Text = id -- Hiện ID sạch
-        StatusLabel.Text = "Đang thử join..."
+        InputBox.Text = id
+        StatusLabel.Text = "Connecting..."
         StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
-        
-        -- Thử Teleport 1 lần
         TeleportService:TeleportToPlaceInstance(game.PlaceId, id, LocalPlayer)
     else
-        StatusLabel.Text = "Lỗi: Không tìm thấy ID!"
+        StatusLabel.Text = "Lỗi: ID không hợp lệ!"
         StatusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
     end
 end)
 
--- Logic nút SPAM JOIN
+-- Logic Spam Join
 BtnSpamJoin.MouseButton1Click:Connect(function()
-    -- Chế độ Toggle (Bấm để Bật/Tắt)
     if isSpamming then
-        -- Đang chạy thì tắt đi
         isSpamming = false
-        BtnSpamJoin.Text = "SPAM JOIN (Treo)"
-        BtnSpamJoin.BackgroundColor3 = Color3.fromRGB(230, 126, 34) -- Màu cam
+        BtnSpamJoin.Text = "SPAM JOIN"
+        BtnSpamJoin.BackgroundColor3 = Color3.fromRGB(230, 126, 34)
         StatusLabel.Text = "Đã dừng spam."
-        StatusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
     else
-        -- Chưa chạy thì bật lên
         local id = extractJobId(InputBox.Text)
-        if not id then
-            StatusLabel.Text = "Lỗi: Không tìm thấy ID!"
-            StatusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
-            return
-        end
-
-        InputBox.Text = id -- Hiện ID sạch
+        if not id then StatusLabel.Text = "Chưa có ID!" return end
+        InputBox.Text = id
         isSpamming = true
         BtnSpamJoin.Text = "DỪNG SPAM"
-        BtnSpamJoin.BackgroundColor3 = Color3.fromRGB(192, 57, 43) -- Màu đỏ
-        StatusLabel.Text = "Đang Spam Join (1s)..."
-        StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-
-        -- Vòng lặp Spam
+        BtnSpamJoin.BackgroundColor3 = Color3.fromRGB(192, 57, 43)
+        StatusLabel.Text = "Đang spam..."
         task.spawn(function()
             while isSpamming do
-                if id == game.JobId then
-                    StatusLabel.Text = "Thành công!"
-                    isSpamming = false
-                    break
-                end
-
-                pcall(function()
-                    TeleportService:TeleportToPlaceInstance(game.PlaceId, id, LocalPlayer)
-                end)
-                
-                task.wait(1) -- Delay 1 giây
+                if id == game.JobId then isSpamming = false break end
+                pcall(function() TeleportService:TeleportToPlaceInstance(game.PlaceId, id, LocalPlayer) end)
+                task.wait(1)
             end
         end)
     end
 end)
+
+-- Logic ESP Mirage
+BtnESP.MouseButton1Click:Connect(function()
+    local state = toggleESP()
+    if state then
+        BtnESP.Text = "ĐANG QUÉT TÌM ĐẢO..."
+        BtnESP.BackgroundColor3 = Color3.fromRGB(46, 204, 113) -- Xanh lá
+        
+        -- Tạo vòng lặp quét
+        task.spawn(function()
+            while espEnabled do
+                local mirage = scanForMirage()
+                if mirage then
+                    -- Nếu tìm thấy
+                    createESP(mirage, "MIRAGE ISLAND (ĐẢO BÍ ẨN)")
+                    BtnESP.Text = "ĐÃ TÌM THẤY ĐẢO!"
+                    StatusLabel.Text = "PHÁT HIỆN MIRAGE ISLAND!"
+                    StatusLabel.TextColor3 = Color3.fromRGB(255, 0, 255)
+                    
+                    -- Gửi thông báo hệ thống
+                    pcall(function()
+                        StarterGui:SetCore("SendNotification", {
+                            Title = "PHÁT HIỆN ĐẢO!",
+                            Text = "Đã tìm thấy Mirage Island. Hãy nhìn xung quanh!",
+                            Duration = 10
+                        })
+                    end)
+                else
+                    StatusLabel.Text = "Đang tìm đảo..."
+                    StatusLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+                end
+                task.wait(3) -- Quét mỗi 3 giây 1 lần cho đỡ lag
+            end
+        end)
+    else
+        BtnESP.Text = "BẬT TÌM ĐẢO BÍ ẨN (MIRAGE)"
+        BtnESP.BackgroundColor3 = Color3.fromRGB(142, 68, 173)
+        StatusLabel.Text = "Đã tắt tìm đảo."
+        -- Xóa ESP cũ
+        for _, v in pairs(Workspace:GetDescendants()) do
+            if v.Name == "MirageESP" then v:Destroy() end
+        end
+    end
+end)
+
+]==]
+
+-- [[ KÍCH HOẠT VÀ AUTOLOAD ]] --
+loadstring(SourceCode)()
+
+local queue_on_teleport = queue_on_teleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport)
+if queue_on_teleport then
+    local function InjectNext()
+        local payload = "local SourceCode = [==[" .. SourceCode .. "]==]; loadstring(SourceCode)();"
+        local q = queue_on_teleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport)
+        if q then q(payload) end
+    end
+    InjectNext()
+end
