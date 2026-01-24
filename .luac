@@ -1,6 +1,6 @@
 --[[ 
-    BLOX FRUITS TOOLKIT: JOINER + AUTOLOAD + MIRAGE ESP
-    Features: Rounded UI, Auto Pirates, Smart Input, Game Loaded Check
+    BLOX FRUITS TOOLKIT: JOINER + AUTOLOAD + MIRAGE ESP (USER FIXED LOGIC)
+    Integrated User's Robust Scan Code + Rounded UI + Auto Team
 ]]
 
 local SourceCode = [==[
@@ -8,19 +8,19 @@ local SourceCode = [==[
 -- [[ 1. CHỜ GAME LOAD & CHECK PLAYER ]] --
 repeat task.wait() until game:IsLoaded()
 local Players = game:GetService("Players")
+local StarterGui = game:GetService("StarterGui")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+local TeleportService = game:GetService("TeleportService")
+local VirtualUser = game:GetService("VirtualUser")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CoreGui = game:GetService("CoreGui")
+
 repeat task.wait() until Players.LocalPlayer
 local LocalPlayer = Players.LocalPlayer
 
-local TeleportService = game:GetService("TeleportService")
-local VirtualUser = game:GetService("VirtualUser")
-local Workspace = game:GetService("Workspace")
-local CoreGui = game:GetService("CoreGui")
-local StarterGui = game:GetService("StarterGui")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
-
 --------------------------------------------------------------------------------
--- 2. AUTO PICK TEAM PIRATES (HẢI TẶC)
+-- 2. AUTO PICK TEAM PIRATES
 --------------------------------------------------------------------------------
 task.spawn(function()
     while not LocalPlayer.Team or LocalPlayer.Team.Name == "Neutral" do
@@ -34,7 +34,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------------------
--- 3. HỆ THỐNG ANTI-AFK
+-- 3. ANTI-AFK
 --------------------------------------------------------------------------------
 local function activateAntiAfk()
     LocalPlayer.Idled:Connect(function()
@@ -45,10 +45,11 @@ end
 activateAntiAfk()
 
 --------------------------------------------------------------------------------
--- 4. HỆ THỐNG ESP MIRAGE ISLAND
+-- 4. HỆ THỐNG ESP MIRAGE ISLAND (LOGIC CỦA BẠN ĐÃ ĐƯỢC TÍCH HỢP)
 --------------------------------------------------------------------------------
 local espEnabled = false
 local foundMirage = false
+local foundMirageObject = nil
 
 local function sendNotification(title, text)
     pcall(function()
@@ -60,16 +61,39 @@ local function sendNotification(title, text)
     end)
 end
 
+-- Lấy một BasePart đại diện cho object
+local function getRepresentativePart(object)
+    if not object then return nil end
+    if typeof(object) ~= "Instance" then return nil end
+
+    if object:IsA("BasePart") then
+        return object
+    elseif object:IsA("Model") then
+        if object.PrimaryPart and object.PrimaryPart:IsA("BasePart") then
+            return object.PrimaryPart
+        end
+        local part = object:FindFirstChildWhichIsA("BasePart", true)
+        return part
+    end
+    return nil
+end
+
+-- Hàm tạo ESP (Theo logic bạn cung cấp)
 local function createESP(object)
-    if object:FindFirstChild("MirageESP_Rounded") then return end 
+    if not object then return end
+
+    local targetPart = getRepresentativePart(object)
+    if not targetPart then return end
+
+    if targetPart:FindFirstChild("MirageESP_Rounded") then return end
 
     local bgui = Instance.new("BillboardGui")
     bgui.Name = "MirageESP_Rounded"
-    bgui.Adornee = object
+    bgui.Adornee = targetPart
     bgui.Size = UDim2.new(0, 200, 0, 50)
-    bgui.StudsOffset = Vector3.new(0, 150, 0)
-    bgui.AlwaysOnTop = true 
-    bgui.Parent = object
+    bgui.StudsOffset = Vector3.new(0, 100, 0) -- Đẩy cao lên cho dễ nhìn
+    bgui.AlwaysOnTop = true
+    bgui.Parent = targetPart
 
     local label = Instance.new("TextLabel")
     label.Parent = bgui
@@ -80,47 +104,106 @@ local function createESP(object)
     label.TextStrokeColor3 = Color3.fromRGB(0,0,0)
     label.TextSize = 20
     label.Font = Enum.Font.GothamBlack
-    
+    label.TextWrapped = true
+
+    -- Loop cập nhật text
     local updateLoop
     updateLoop = RunService.RenderStepped:Connect(function()
-        if not object or not object.Parent or not bgui or not espEnabled then
-            updateLoop:Disconnect()
+        if not espEnabled or not targetPart or not targetPart.Parent or not bgui then
+            if updateLoop then updateLoop:Disconnect() end
             if bgui then bgui:Destroy() end
             return
         end
-        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            local dist = math.floor((LocalPlayer.Character.HumanoidRootPart.Position - object.Position).Magnitude)
-            label.Text = "🌑 MIRAGE ISLAND 🌑\n[" .. dist .. "m]"
+
+        if LocalPlayer and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local ok, dist = pcall(function()
+                return math.floor((LocalPlayer.Character.HumanoidRootPart.Position - targetPart.Position).Magnitude)
+            end)
+            if ok and dist then
+                label.Text = "🌑 MIRAGE ISLAND 🌑\n[" .. dist .. "m]"
+            else
+                label.Text = "🌑 MIRAGE ISLAND 🌑"
+            end
         end
     end)
-    
-    -- Thông báo ngay khi tạo
-    local distInit = math.floor((LocalPlayer.Character.HumanoidRootPart.Position - object.Position).Magnitude)
-    sendNotification("ĐÃ TÌM THẤY MIRAGE!", "Cách bạn: " .. distInit .. "m")
+
+    -- Thông báo ban đầu
+    if LocalPlayer and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local distInit = math.floor((LocalPlayer.Character.HumanoidRootPart.Position - targetPart.Position).Magnitude)
+        sendNotification("ĐÃ TÌM THẤY MIRAGE!", "Cách bạn: " .. distInit .. "m")
+    end
 end
 
+-- Hàm quét Mirage (Cải tiến theo yêu cầu: Đệ quy + Case insensitive)
 local function scanForMirage()
-    local possibleNames = {"Mirage Island", "Mirage", "MirageIsland"}
-    local searchTargets = {Workspace}
-    if Workspace:FindFirstChild("Map") then table.insert(searchTargets, Workspace.Map) end
+    local possibleNames = {"Mirage Island", "Mirage", "MirageIsland", "SeaEventIsland"}
     
-    for _, folder in pairs(searchTargets) do
-        for _, v in pairs(folder:GetChildren()) do
-            for _, name in pairs(possibleNames) do
-                if v.Name == name or v.Name:find("Mirage") then return v end
+    local function nameMatches(s)
+        if not s then return false end
+        local lower = string.lower(s)
+        for _, nm in ipairs(possibleNames) do
+            if string.find(lower, string.lower(nm), 1, true) then
+                return true
             end
-            if v:IsA("MeshPart") and v.Name:find("Island") and v.Size.Magnitude > 2000 then return v end
+        end
+        return false
+    end
+
+    -- 1. Quét sâu (GetDescendants) nhưng lọc Folder để giảm lag
+    local searchScope = {Workspace}
+    -- Nếu có Map folder thì ưu tiên quét trong đó trước
+    if Workspace:FindFirstChild("Map") then table.insert(searchScope, Workspace.Map) end
+
+    for _, rootFolder in pairs(searchScope) do
+        -- Lưu ý: GetDescendants rất nặng, ta giới hạn quét các Model và Part lớn
+        for _, inst in ipairs(rootFolder:GetChildren()) do 
+            -- Check tên trực tiếp
+            if nameMatches(inst.Name) then return inst end
+            
+            -- Check con cháu (Deep Scan nhẹ)
+            -- Chỉ deep scan nếu object là Folder hoặc Model lạ
+            if inst:IsA("Folder") or inst:IsA("Model") then
+                if nameMatches(inst.Name) then return inst end
+                -- Tìm bên trong nó
+                for _, child in ipairs(inst:GetChildren()) do
+                    if nameMatches(child.Name) then return child end
+                     -- Check MeshPart lớn (fallback)
+                    if child:IsA("BasePart") and child.Size.Magnitude > 2000 and string.find(string.lower(child.Name), "island") then
+                        return child
+                    end
+                end
+            end
         end
     end
+
+    -- 2. Fallback: Check đất dưới chân (Phòng trường hợp tên bị đổi hoàn toàn)
+    -- Đây là lớp bảo vệ cuối cùng nếu tên đảo bị đổi
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChild("Humanoid") and char.Humanoid.FloorPart then
+        local floor = char.Humanoid.FloorPart
+        local model = floor:FindFirstAncestorOfClass("Model")
+        if model and model.Name ~= "Map" and model.Name ~= "Workspace" and not model:FindFirstChild("Humanoid") and floor.Size.Magnitude > 100 then
+            return model -- Trả về model đang đứng lên nếu nó lạ
+        end
+    end
+
     return nil
 end
 
 local function toggleESP()
     espEnabled = not espEnabled
-    if not espEnabled then foundMirage = false end
+    if not espEnabled then
+        foundMirage = false
+        foundMirageObject = nil
+        -- Xóa sạch ESP cũ
+        for _, v in pairs(Workspace:GetDescendants()) do
+            if v.Name == "MirageESP_Rounded" then v:Destroy() end
+        end
+    end
     return espEnabled
 end
 
+-- Helper Job ID
 local function extractJobId(text)
     if not text then return nil end
     local pattern = "%x%x%x%x%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%x%x%x%x%x%x%x%x"
@@ -128,10 +211,10 @@ local function extractJobId(text)
 end
 
 --------------------------------------------------------------------------------
--- 5. GIAO DIỆN UI (ROUNDED CORNERS)
+-- 5. GIAO DIỆN UI (ROUNDED)
 --------------------------------------------------------------------------------
 for _, v in pairs(CoreGui:GetChildren()) do
-    if v.Name == "BloxFruitsToolRound" then v:Destroy() end
+    if v.Name == "BloxFruitsToolRoundFix" then v:Destroy() end
 end
 
 local ScreenGui = Instance.new("ScreenGui")
@@ -144,7 +227,6 @@ local BtnJoinOnce = Instance.new("TextButton")
 local BtnSpamJoin = Instance.new("TextButton")
 local BtnESP = Instance.new("TextButton")
 
--- Hàm bo tròn góc
 local function AddCorner(instance, radius)
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, radius)
@@ -155,7 +237,7 @@ if syn and syn.protect_gui then syn.protect_gui(ScreenGui) ScreenGui.Parent = Co
 elseif gethui then ScreenGui.Parent = gethui()
 else ScreenGui.Parent = CoreGui end
 
-ScreenGui.Name = "BloxFruitsToolRound"
+ScreenGui.Name = "BloxFruitsToolRoundFix"
 
 -- Main Frame
 MainFrame.Name = "MainFrame"
@@ -165,7 +247,7 @@ MainFrame.Position = UDim2.new(0.5, -160, 0.5, -130)
 MainFrame.Size = UDim2.new(0, 320, 0, 260)
 MainFrame.Active = true
 MainFrame.Draggable = true
-AddCorner(MainFrame, 12) -- Bo tròn Frame chính
+AddCorner(MainFrame, 12)
 
 -- Title
 Title.Parent = MainFrame
@@ -174,7 +256,7 @@ Title.BackgroundTransparency = 1
 Title.Position = UDim2.new(0, 15, 0, 0)
 Title.Size = UDim2.new(0.8, 0, 0, 35)
 Title.Font = Enum.Font.GothamBold
-Title.Text = "BF Tool: Joiner & ESP"
+Title.Text = "BF Tool: Joiner & ESP (Fixed)"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.TextSize = 14
@@ -188,7 +270,7 @@ CloseButton.Text = "X"
 CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 CloseButton.Font = Enum.Font.GothamBold
 CloseButton.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
-AddCorner(CloseButton, 6) -- Bo tròn nút đóng
+AddCorner(CloseButton, 6)
 
 -- Input Box
 InputBox.Parent = MainFrame
@@ -201,8 +283,8 @@ InputBox.Text = ""
 InputBox.TextColor3 = Color3.fromRGB(220, 220, 220)
 InputBox.TextSize = 12
 InputBox.TextWrapped = true
-InputBox.ClearTextOnFocus = true -- [QUAN TRỌNG] Tự xóa khi nhấn vào
-AddCorner(InputBox, 8) -- Bo tròn Input
+InputBox.ClearTextOnFocus = true
+AddCorner(InputBox, 8)
 
 -- Status Label
 StatusLabel.Parent = MainFrame
@@ -214,7 +296,7 @@ StatusLabel.Text = "Trạng thái: Sẵn sàng"
 StatusLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
 StatusLabel.TextSize = 12
 
--- BUTTON 1: JOIN ONCE
+-- BUTTONS
 BtnJoinOnce.Parent = MainFrame
 BtnJoinOnce.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
 BtnJoinOnce.Position = UDim2.new(0.05, 0, 0.5, 0)
@@ -223,9 +305,8 @@ BtnJoinOnce.Font = Enum.Font.GothamBold
 BtnJoinOnce.Text = "VÀO (1 Lần)"
 BtnJoinOnce.TextColor3 = Color3.fromRGB(255, 255, 255)
 BtnJoinOnce.TextSize = 12
-AddCorner(BtnJoinOnce, 8) -- Bo tròn nút
+AddCorner(BtnJoinOnce, 8)
 
--- BUTTON 2: SPAM JOIN
 BtnSpamJoin.Parent = MainFrame
 BtnSpamJoin.BackgroundColor3 = Color3.fromRGB(230, 126, 34)
 BtnSpamJoin.Position = UDim2.new(0.53, 0, 0.5, 0)
@@ -234,21 +315,20 @@ BtnSpamJoin.Font = Enum.Font.GothamBold
 BtnSpamJoin.Text = "SPAM VÀO"
 BtnSpamJoin.TextColor3 = Color3.fromRGB(255, 255, 255)
 BtnSpamJoin.TextSize = 12
-AddCorner(BtnSpamJoin, 8) -- Bo tròn nút
+AddCorner(BtnSpamJoin, 8)
 
--- BUTTON 3: ESP MIRAGE
 BtnESP.Parent = MainFrame
 BtnESP.BackgroundColor3 = Color3.fromRGB(155, 89, 182)
 BtnESP.Position = UDim2.new(0.05, 0, 0.72, 0)
 BtnESP.Size = UDim2.new(0.9, 0, 0.2, 0)
 BtnESP.Font = Enum.Font.GothamBold
-BtnESP.Text = "TÌM ĐẢO MIRAGE (AUTO)"
+BtnESP.Text = "TÌM MIRAGE (SCAN FIX)"
 BtnESP.TextColor3 = Color3.fromRGB(255, 255, 255)
 BtnESP.TextSize = 13
-AddCorner(BtnESP, 8) -- Bo tròn nút
+AddCorner(BtnESP, 8)
 
 --------------------------------------------------------------------------------
--- 6. LOGIC XỬ LÝ
+-- 6. LOGIC KẾT NỐI
 --------------------------------------------------------------------------------
 local isSpamming = false
 
@@ -258,7 +338,6 @@ BtnJoinOnce.MouseButton1Click:Connect(function()
     BtnSpamJoin.BackgroundColor3 = Color3.fromRGB(230, 126, 34)
     local id = extractJobId(InputBox.Text)
     if id then
-        -- Không gán lại text để tránh mất clear on focus, chỉ xử lý
         StatusLabel.Text = "Đang kết nối..."
         StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
         TeleportService:TeleportToPlaceInstance(game.PlaceId, id, LocalPlayer)
@@ -294,42 +373,44 @@ end)
 BtnESP.MouseButton1Click:Connect(function()
     local state = toggleESP()
     if state then
-        BtnESP.Text = "ĐANG QUÉT..."
+        BtnESP.Text = "ĐANG QUÉT SÂU..."
         BtnESP.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
         task.spawn(function()
             while espEnabled do
-                local mirage = scanForMirage()
-                if mirage then
-                    if not foundMirage then
+                if not foundMirage then
+                    local mirage = scanForMirage()
+                    if mirage then
                         foundMirage = true
+                        foundMirageObject = mirage
                         createESP(mirage)
-                        BtnESP.Text = "ĐÃ TÌM THẤY ĐẢO!"
+                        BtnESP.Text = "ĐÃ TÌM THẤY!"
                         StatusLabel.Text = "PHÁT HIỆN MIRAGE!"
                         StatusLabel.TextColor3 = Color3.fromRGB(255, 0, 255)
+                    else
+                         StatusLabel.Text = "Đang tìm (chưa thấy)..."
+                         StatusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
                     end
                 else
-                    if foundMirage then
-                        foundMirage = false
-                        BtnESP.Text = "ĐANG QUÉT..."
-                        StatusLabel.Text = "Đảo đã biến mất..."
-                        StatusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+                    -- Nếu đã tìm thấy, check xem nó còn đó ko
+                    if foundMirageObject and not foundMirageObject.Parent then
+                         foundMirage = false
+                         foundMirageObject = nil
+                         BtnESP.Text = "ĐANG QUÉT SÂU..."
+                         StatusLabel.Text = "Đảo biến mất, tìm lại..."
                     end
                 end
-                task.wait(foundMirage and 5 or 1.5)
+                task.wait(3) -- Quét mỗi 3s (vì hàm quét này nặng hơn cũ)
             end
         end)
     else
-        BtnESP.Text = "TÌM ĐẢO MIRAGE (AUTO)"
+        BtnESP.Text = "TÌM MIRAGE (SCAN FIX)"
         BtnESP.BackgroundColor3 = Color3.fromRGB(155, 89, 182)
         StatusLabel.Text = "Đã tắt tìm đảo."
-        for _, v in pairs(Workspace:GetDescendants()) do
-            if v.Name == "MirageESP_Rounded" then v:Destroy() end
-        end
     end
 end)
 ]==]
 
--- [[ KÍCH HOẠT VÀ AUTOLOAD ]] --
+-- [[ KÍCH HOẠT ]] --
 loadstring(SourceCode)()
 
 local queue_on_teleport = queue_on_teleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport) or (request and request.queue_on_teleport)
