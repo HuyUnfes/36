@@ -1,6 +1,6 @@
 --[[ 
-    ADVANCED JOB ID JOINER & ANTI-AFK
-    Created for request: Join Job ID, Clean Text, Spam Join 1s, Anti-AFK
+    JOB ID JOINER - DUAL MODE (SINGLE & SPAM)
+    Created by Request
 ]]
 
 local Players = game:GetService("Players")
@@ -10,71 +10,64 @@ local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 
 --------------------------------------------------------------------------------
--- 1. ANTI-AFK SYSTEM
+-- 1. ANTI-AFK
 --------------------------------------------------------------------------------
 local function activateAntiAfk()
     LocalPlayer.Idled:Connect(function()
         VirtualUser:CaptureController()
         VirtualUser:ClickButton2(Vector2.new())
-        print("Anti-AFK: Prevented disconnection.")
     end)
-    print("Anti-AFK đã được kích hoạt.")
 end
 activateAntiAfk()
 
 --------------------------------------------------------------------------------
--- 2. HÀM XỬ LÝ CHUỖI (CLEAN TEXT)
+-- 2. HÀM LỌC ID (CLEAN TEXT)
 --------------------------------------------------------------------------------
--- Hàm này sử dụng Pattern Matching để tìm đúng định dạng Job ID (UUID)
--- Định dạng: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 local function extractJobId(text)
     if not text then return nil end
-    -- Pattern tìm chuỗi hex có dấu gạch ngang (UUID standard)
-    local jobId = string.match(text, "%x+-%x+-%x+-%x+-%x+")
-    return jobId
+    -- Pattern chuẩn UUID: 8-4-4-4-12
+    local pattern = "%x%x%x%x%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%x%x%x%x%x%x%x%x"
+    return string.match(text, pattern)
 end
 
 --------------------------------------------------------------------------------
--- 3. GIAO DIỆN UI (GUI)
+-- 3. GIAO DIỆN UI
 --------------------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 local MainFrame = Instance.new("Frame")
 local Title = Instance.new("TextLabel")
-local InputBox = Instance.new("TextBox")
-local JoinButton = Instance.new("TextButton")
-local StatusLabel = Instance.new("TextLabel")
 local CloseButton = Instance.new("TextButton")
+local InputBox = Instance.new("TextBox")
+local StatusLabel = Instance.new("TextLabel")
+local BtnJoinOnce = Instance.new("TextButton") -- Nút Join thường
+local BtnSpamJoin = Instance.new("TextButton") -- Nút Spam
 
--- Bảo vệ GUI khỏi việc bị reset khi chết
-if syn and syn.protect_gui then
-    syn.protect_gui(ScreenGui)
-    ScreenGui.Parent = CoreGui
-elseif gethui then
-    ScreenGui.Parent = gethui()
-else
-    ScreenGui.Parent = CoreGui
-end
+-- Parent UI
+if syn and syn.protect_gui then syn.protect_gui(ScreenGui) ScreenGui.Parent = CoreGui
+elseif gethui then ScreenGui.Parent = gethui()
+else ScreenGui.Parent = CoreGui end
 
--- Cấu hình MainFrame
-MainFrame.Name = "JobIdJoiner"
+-- Main Frame
+MainFrame.Name = "JobIdDual"
 MainFrame.Parent = ScreenGui
-MainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 MainFrame.BorderSizePixel = 0
 MainFrame.Position = UDim2.new(0.5, -150, 0.5, -100)
 MainFrame.Size = UDim2.new(0, 300, 0, 200)
 MainFrame.Active = true
-MainFrame.Draggable = true -- Cho phép kéo thả bảng
+MainFrame.Draggable = true
 
--- Tiêu đề
+-- Title
 Title.Parent = MainFrame
-Title.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+Title.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
 Title.Size = UDim2.new(1, 0, 0, 30)
 Title.Font = Enum.Font.GothamBold
-Title.Text = "Job ID Joiner (Spam 1s)"
+Title.Text = "  Job ID Joiner"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.TextSize = 14
 
--- Nút đóng
+-- Close Button
 CloseButton.Parent = Title
 CloseButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 CloseButton.Position = UDim2.new(1, -30, 0, 0)
@@ -82,92 +75,125 @@ CloseButton.Size = UDim2.new(0, 30, 0, 30)
 CloseButton.Font = Enum.Font.GothamBold
 CloseButton.Text = "X"
 CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseButton.MouseButton1Click:Connect(function()
-    ScreenGui:Destroy()
-end)
+CloseButton.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
 
--- Ô nhập liệu (Input)
+-- Input Box
 InputBox.Parent = MainFrame
-InputBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+InputBox.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
 InputBox.BorderSizePixel = 0
-InputBox.Position = UDim2.new(0.1, 0, 0.25, 0)
-InputBox.Size = UDim2.new(0.8, 0, 0.2, 0)
-InputBox.Font = Enum.Font.Gotham
-InputBox.PlaceholderText = "Dán Job ID hoặc Text từ Discord vào đây..."
+InputBox.Position = UDim2.new(0.05, 0, 0.2, 0)
+InputBox.Size = UDim2.new(0.9, 0, 0.25, 0)
+InputBox.Font = Enum.Font.Code
+InputBox.PlaceholderText = "Paste text Discord... (tự lọc rác)"
 InputBox.Text = ""
-InputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+InputBox.TextColor3 = Color3.fromRGB(200, 200, 200)
 InputBox.TextSize = 12
 InputBox.TextWrapped = true
 InputBox.ClearTextOnFocus = false
 
--- Nhãn trạng thái
+-- Status Label
 StatusLabel.Parent = MainFrame
 StatusLabel.BackgroundTransparency = 1
-StatusLabel.Position = UDim2.new(0, 0, 0.5, 0)
+StatusLabel.Position = UDim2.new(0, 0, 0.45, 0)
 StatusLabel.Size = UDim2.new(1, 0, 0.15, 0)
 StatusLabel.Font = Enum.Font.Gotham
 StatusLabel.Text = "Waiting..."
-StatusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+StatusLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
 StatusLabel.TextSize = 12
 
--- Nút Join
-JoinButton.Parent = MainFrame
-JoinButton.BackgroundColor3 = Color3.fromRGB(0, 170, 127)
-JoinButton.BorderSizePixel = 0
-JoinButton.Position = UDim2.new(0.2, 0, 0.7, 0)
-JoinButton.Size = UDim2.new(0.6, 0, 0.2, 0)
-JoinButton.Font = Enum.Font.GothamBold
-JoinButton.Text = "JOIN SERVER (SPAM)"
-JoinButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-JoinButton.TextSize = 14
+--------------------------------------------------------------------------------
+-- 4. SETUP 2 NÚT BẤM
+--------------------------------------------------------------------------------
+
+-- >> NÚT 1: JOIN 1 LẦN (Màu Xanh Lá)
+BtnJoinOnce.Parent = MainFrame
+BtnJoinOnce.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+BtnJoinOnce.Position = UDim2.new(0.05, 0, 0.65, 0)
+BtnJoinOnce.Size = UDim2.new(0.42, 0, 0.25, 0)
+BtnJoinOnce.Font = Enum.Font.GothamBold
+BtnJoinOnce.Text = "JOIN (1 Lần)"
+BtnJoinOnce.TextColor3 = Color3.fromRGB(255, 255, 255)
+BtnJoinOnce.TextSize = 12
+
+-- >> NÚT 2: SPAM JOIN (Màu Cam)
+BtnSpamJoin.Parent = MainFrame
+BtnSpamJoin.BackgroundColor3 = Color3.fromRGB(230, 126, 34)
+BtnSpamJoin.Position = UDim2.new(0.53, 0, 0.65, 0)
+BtnSpamJoin.Size = UDim2.new(0.42, 0, 0.25, 0)
+BtnSpamJoin.Font = Enum.Font.GothamBold
+BtnSpamJoin.Text = "SPAM JOIN (Treo)"
+BtnSpamJoin.TextColor3 = Color3.fromRGB(255, 255, 255)
+BtnSpamJoin.TextSize = 12
 
 --------------------------------------------------------------------------------
--- 4. LOGIC XỬ LÝ JOIN
+-- 5. LOGIC XỬ LÝ
 --------------------------------------------------------------------------------
-local isJoining = false
 
-JoinButton.MouseButton1Click:Connect(function()
-    local rawText = InputBox.Text
-    local cleanID = extractJobId(rawText)
+-- Biến kiểm soát spam
+local isSpamming = false
 
-    if not cleanID then
-        StatusLabel.Text = "Lỗi: Không tìm thấy Job ID hợp lệ!"
+-- Logic nút JOIN 1 LẦN
+BtnJoinOnce.MouseButton1Click:Connect(function()
+    -- Tắt spam nếu đang chạy
+    isSpamming = false 
+    BtnSpamJoin.Text = "SPAM JOIN (Treo)"
+    BtnSpamJoin.BackgroundColor3 = Color3.fromRGB(230, 126, 34)
+
+    local id = extractJobId(InputBox.Text)
+    if id then
+        InputBox.Text = id -- Hiện ID sạch
+        StatusLabel.Text = "Đang thử join..."
+        StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
+        
+        -- Thử Teleport 1 lần
+        TeleportService:TeleportToPlaceInstance(game.PlaceId, id, LocalPlayer)
+    else
+        StatusLabel.Text = "Lỗi: Không tìm thấy ID!"
         StatusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
-        return
     end
-
-    if isJoining then return end -- Ngăn bấm nhiều lần tạo nhiều luồng spam
-    isJoining = true
-    
-    StatusLabel.Text = "Đang spam join ID: " .. cleanID:sub(1,8) .. "..."
-    StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
-    
-    -- Vòng lặp Spam Join (1 giây 1 lần)
-    task.spawn(function()
-        while isJoining do
-            -- Kiểm tra xem ID có khác với server hiện tại không để tránh lỗi
-            if cleanID == game.JobId then
-                StatusLabel.Text = "Bạn đang ở trong server này rồi!"
-                isJoining = false
-                break
-            end
-
-            -- Thực hiện Teleport
-            -- Lưu ý: TeleportToPlaceInstance chỉ hoạt động nếu Job ID thuộc về Place ID hiện tại.
-            -- Nếu muốn join game khác, cần phải biết PlaceID của game đó. Script này mặc định là game hiện tại.
-            local success, err = pcall(function()
-                TeleportService:TeleportToPlaceInstance(game.PlaceId, cleanID, LocalPlayer)
-            end)
-
-            if success then
-                StatusLabel.Text = "Đang kết nối..."
-            else
-                print("Teleport failed (retrying): " .. tostring(err))
-            end
-            
-            task.wait(1) -- Spam 1s/lần theo yêu cầu
-        end
-    end)
 end)
 
-print("Job ID Script Loaded!")
+-- Logic nút SPAM JOIN
+BtnSpamJoin.MouseButton1Click:Connect(function()
+    -- Chế độ Toggle (Bấm để Bật/Tắt)
+    if isSpamming then
+        -- Đang chạy thì tắt đi
+        isSpamming = false
+        BtnSpamJoin.Text = "SPAM JOIN (Treo)"
+        BtnSpamJoin.BackgroundColor3 = Color3.fromRGB(230, 126, 34) -- Màu cam
+        StatusLabel.Text = "Đã dừng spam."
+        StatusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    else
+        -- Chưa chạy thì bật lên
+        local id = extractJobId(InputBox.Text)
+        if not id then
+            StatusLabel.Text = "Lỗi: Không tìm thấy ID!"
+            StatusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
+            return
+        end
+
+        InputBox.Text = id -- Hiện ID sạch
+        isSpamming = true
+        BtnSpamJoin.Text = "DỪNG SPAM"
+        BtnSpamJoin.BackgroundColor3 = Color3.fromRGB(192, 57, 43) -- Màu đỏ
+        StatusLabel.Text = "Đang Spam Join (1s)..."
+        StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+
+        -- Vòng lặp Spam
+        task.spawn(function()
+            while isSpamming do
+                if id == game.JobId then
+                    StatusLabel.Text = "Thành công!"
+                    isSpamming = false
+                    break
+                end
+
+                pcall(function()
+                    TeleportService:TeleportToPlaceInstance(game.PlaceId, id, LocalPlayer)
+                end)
+                
+                task.wait(1) -- Delay 1 giây
+            end
+        end)
+    end
+end)
